@@ -62,9 +62,48 @@ app.post('/api/extract-tracks', async (req, res) => {
   if (!ANTHROPIC_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
 
   try {
-    const prompt = description
-      ? `Extract all tracks from this YouTube video description/tracklist:\n\n${description}`
-      : `Extract all tracks from this YouTube video: ${url}\n\nAnalyze the URL, video ID, and any context to identify the tracklist. If it appears to be a DJ mix or reggae/funk/soul compilation, use your music knowledge to identify likely tracks.`;
+    let prompt;
+
+    if (description) {
+      prompt = `Extract all tracks from this YouTube video description/tracklist:\n\n${description}`;
+    } else {
+      // Fetch the YouTube page and extract description + chapter markers from ytInitialData
+      let ytContext = null;
+      try {
+        const ytRes = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
+        });
+        if (ytRes.ok) {
+          const html = await ytRes.text();
+
+          // Extract video description embedded in ytInitialData
+          const descMatch = html.match(/"attributedDescriptionBodyText":\{"content":"((?:[^"\\]|\\.)*)"/s);
+          const descText = descMatch
+            ? descMatch[1]
+                .replace(/\\n/g, '\n')
+                .replace(/\\"/g, '"')
+                .replace(/\\\\/g, '\\')
+                .slice(0, 4000)
+            : null;
+
+          // Extract chapter titles (e.g. "0:00 Artist – Track")
+          const chapters = [...html.matchAll(/"chapterRenderer":\{"title":\{"runs":\[\{"text":"([^"]+)"/g)]
+            .map(m => m[1]);
+
+          const parts = [];
+          if (descText) parts.push(descText);
+          if (chapters.length) parts.push('Chapters:\n' + chapters.join('\n'));
+          if (parts.length) ytContext = parts.join('\n\n');
+          console.log(`[yt-fetch] desc=${!!descText} chapters=${chapters.length} context_len=${ytContext?.length || 0}`);
+        }
+      } catch (ytErr) {
+        console.warn('[yt-fetch] failed, falling back to URL-only:', ytErr.message);
+      }
+
+      prompt = ytContext
+        ? `Extract all tracks from this YouTube video. Here is the page description and chapter markers:\n\n${ytContext}`
+        : `Extract all tracks from this YouTube video: ${url}\n\nAnalyze the URL, video ID, and any context to identify the tracklist. If it appears to be a DJ mix or reggae/funk/soul compilation, use your music knowledge to identify likely tracks.`;
+    }
 
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
