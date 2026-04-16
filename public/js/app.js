@@ -259,7 +259,7 @@ const App = (() => {
         STATE.wantlisted.has(ri) ? `<span class="badge badge-green">♥ wantlisted</span>` : '',
       ].filter(Boolean).join('');
 
-      const fallUrl = `https://www.discogs.com/sell/list?q=${encodeURIComponent((r.artist||'')+' '+(r.title||''))}&ships_from=Europe&condition=Mint+%28M%29&condition=Near+Mint+%28NM+or+M-%29&condition=Very+Good+Plus+%28VG%2B%29&condition=Very+Good+%28VG%29`;
+      const fallUrl = `https://www.discogs.com/sell/list?q=${encodeURIComponent((r.artist||'')+' '+(r.title||''))}&format=Vinyl`;
 
       const sellersHtml = r.sellers?.length
         ? r.sellers.map((s, si) => `

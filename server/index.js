@@ -13,7 +13,7 @@ const DISCOGS_USER  = process.env.DISCOGS_USER || 'LeeCZ';
 const PORT = process.env.PORT || 3000;
 
 const EU_PRIORITY = [
-  'Czech Republic','Slovakia','Austria','Germany','Poland','Hungary',
+  'Czech Republic','Czechia','Slovakia','Austria','Germany','Poland','Hungary',
   'Slovenia','Croatia','Italy','Switzerland','Netherlands','Belgium',
   'France','Spain','Portugal','Denmark','Sweden','Norway','Finland',
   'Estonia','Latvia','Lithuania','Romania','Bulgaria','Greece','Serbia',
@@ -131,6 +131,7 @@ app.post('/api/search-discogs', async (req, res) => {
       ]);
 
       // 3. Filter + rank EU sellers
+      console.log('ships_from sample:', (listingsData.listings||[]).slice(0,8).map(l => l.ships_from));
       const validListings = (listingsData.listings || []).filter(l =>
         isEU(l.ships_from) && isAccepted(l.condition)
       );
